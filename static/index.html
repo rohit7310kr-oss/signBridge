@@ -1,0 +1,344 @@
+""" signBridge Phase 0 spike: static file server. Python only serves files here.
+Camera capture and MediaPipe landmark extraction run in the browser, so no video
+ever reaches this process. Why stdlib instead of Flask: this server has no
+routes or state, so an extra dependency buys nothing. The real backend (Express
++ Socket.IO) comes later. Run: python main.py Open: http://localhost:8000 Note:
+getUserMedia() only works on a secure context. http://localhost counts as
+secure; http://192.168.x.x does NOT, so test on the same machine. """ import
+mimetypes from functools import partial from http.server import
+SimpleHTTPRequestHandler, ThreadingHTTPServer from pathlib import Path HOST =
+"127.0.0.1" # loopback only; do not expose the camera page to the LAN PORT =
+8000 STATIC_DIR = Path(__file__).parent / "static" # Some platforms (notably
+Windows) map .js/.mjs/.wasm to wrong or missing types, # and browsers refuse to
+run ES modules served with a non-JS MIME type.
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("text/javascript", ".mjs")
+mimetypes.add_type("application/wasm", ".wasm") class
+NoCacheHandler(SimpleHTTPRequestHandler): """Static handler that disables
+caching so edits show up on refresh.""" def end_headers(self):
+self.send_header("Cache-Control", "no-store") super().end_headers() def main()
+-> None: if not (STATIC_DIR / "index.html").exists(): raise SystemExit(f"Missing
+{STATIC_DIR / 'index.html'}") handler = partial(NoCacheHandler,
+directory=str(STATIC_DIR)) with ThreadingHTTPServer((HOST, PORT), handler) as
+server: print(f"signBridge spike running at http://localhost:{PORT} (Ctrl+C to
+stop)") try: server.serve_forever() except KeyboardInterrupt:
+print("\nStopped.") if __name__ == "__main__": main()
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>signBridge: landmark spike</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        padding: 1rem;
+        background: #111;
+        color: #eee;
+      }
+      h1 {
+        font-size: 1.1rem;
+        margin: 0 0 0.75rem;
+      }
+      .layout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      .stage {
+        position: relative;
+        width: 640px;
+        max-width: 100%;
+        aspect-ratio: 4 / 3;
+        background: #000;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      /* Mirror both layers so the preview behaves like a mirror. This is display-only;
+       landmark coordinates stay in the un-mirrored camera frame. */
+      video,
+      canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        transform: scaleX(-1);
+      }
+      video {
+        object-fit: cover;
+      }
+      .panel {
+        flex: 1;
+        min-width: 280px;
+      }
+      button {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: 0;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      #status {
+        margin: 0.75rem 0;
+        min-height: 1.4em;
+      }
+      #status.error {
+        color: #ff8080;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 0.25rem 1rem;
+        margin: 0 0 0.75rem;
+      }
+      dt {
+        color: #aaa;
+      }
+      pre {
+        background: #1c1c1c;
+        padding: 0.75rem;
+        border-radius: 6px;
+        max-height: 320px;
+        overflow: auto;
+        font-size: 0.75rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>signBridge: camera → MediaPipe hand landmarks (Phase 0 spike)</h1>
+
+    <div class="layout">
+      <div>
+        <div class="stage">
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="overlay"></canvas>
+        </div>
+        <p id="status" role="status" aria-live="polite">
+          Click “Start camera” to begin. Video is processed in your browser
+          only.
+        </p>
+        <button id="startBtn">Start camera</button>
+        <button id="stopBtn" disabled>Stop</button>
+      </div>
+
+      <div class="panel">
+        <dl>
+          <dt>Hands detected</dt>
+          <dd id="handCount">–</dd>
+          <dt>Handedness</dt>
+          <dd id="handedness">–</dd>
+          <dt>Inference</dt>
+          <dd id="inferenceMs">–</dd>
+          <dt>Detection FPS</dt>
+          <dd id="fps">–</dd>
+        </dl>
+        <strong>Latest LandmarkFrame</strong>
+        <pre id="frameJson">(nothing yet)</pre>
+      </div>
+    </div>
+
+    <script type="module">
+      // Pinned version. If this 404s, check https://www.npmjs.com/package/@mediapipe/tasks-vision
+      // for a current release and update BOTH URLs below together.
+      const MP_VERSION = "0.10.21";
+      const MP_BUNDLE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/vision_bundle.mjs`;
+      const MP_WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/wasm`;
+      const HAND_MODEL =
+        "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+
+      const { FilesetResolver, HandLandmarker, DrawingUtils } = await import(
+        MP_BUNDLE
+      );
+
+      // ---- DOM ----
+      const $ = (id) => document.getElementById(id);
+      const video = $("video"),
+        canvas = $("overlay"),
+        ctx = canvas.getContext("2d");
+      const startBtn = $("startBtn"),
+        stopBtn = $("stopBtn");
+
+      function setStatus(msg, isError = false) {
+        $("status").textContent = msg;
+        $("status").classList.toggle("error", isError);
+      }
+
+      // ---- Stage 1: camera capture ----
+      let stream = null;
+
+      async function startCamera() {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error(
+            "Camera API unavailable. Use http://localhost or HTTPS in a modern browser.",
+          );
+        }
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+              facingMode: "user",
+            },
+            audio: false,
+          });
+        } catch (err) {
+          // Map the common failures to messages a user can act on.
+          const messages = {
+            NotAllowedError:
+              "Camera permission was denied. Allow camera access in the browser's site settings and try again.",
+            NotFoundError: "No camera found on this device.",
+            NotReadableError: "The camera is in use by another application.",
+          };
+          throw new Error(
+            messages[err.name] ?? `Could not open camera: ${err.message}`,
+          );
+        }
+        video.srcObject = stream;
+        await video.play();
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      }
+
+      function stopCamera() {
+        stream?.getTracks().forEach((t) => t.stop());
+        stream = null;
+        video.srcObject = null;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+
+      // ---- Stage 2: landmark extraction ----
+      let landmarker = null;
+
+      async function createLandmarker() {
+        if (landmarker) return landmarker;
+        const fileset = await FilesetResolver.forVisionTasks(MP_WASM);
+        landmarker = await HandLandmarker.createFromOptions(fileset, {
+          baseOptions: { modelAssetPath: HAND_MODEL, delegate: "GPU" },
+          runningMode: "VIDEO",
+          // ISL has many two-handed signs, so two hands is the minimum.
+          numHands: 2,
+        });
+        return landmarker;
+      }
+
+      /**
+       * Convert MediaPipe's result into the LandmarkFrame shape from our plan.
+       * Keeping this adapter at the boundary means later stages never depend on
+       * MediaPipe's types. `pose` is null until we add the pose landmarker.
+       *
+       * Caveat: MediaPipe assumes a mirrored (selfie) image when labelling
+       * handedness. We feed it the raw camera frame, so "Left"/"Right" are likely
+       * swapped relative to the signer's real hands. We'll verify and fix this in
+       * preprocessing rather than guessing here.
+       */
+      function toLandmarkFrame(result, timestampMs) {
+        return {
+          timestampMs,
+          hands: result.landmarks.map((points, i) => ({
+            handedness: result.handedness[i]?.[0]?.categoryName ?? "Unknown",
+            score: result.handedness[i]?.[0]?.score ?? 0,
+            points: points.map(({ x, y, z }) => ({ x, y, z })),
+          })),
+          pose: null,
+        };
+      }
+
+      // ---- Render / debug (not part of the pipeline) ----
+      let drawer = null;
+      let jsonThrottle = 0;
+
+      function render(frame) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawer ??= new DrawingUtils(ctx);
+        for (const hand of frame.hands) {
+          drawer.drawConnectors(hand.points, HandLandmarker.HAND_CONNECTIONS, {
+            color: "#00e5a0",
+            lineWidth: 3,
+          });
+          drawer.drawLandmarks(hand.points, { color: "#ff4d6d", radius: 3 });
+        }
+        $("handCount").textContent = String(frame.hands.length);
+        $("handedness").textContent =
+          frame.hands
+            .map((h) => `${h.handedness} (${h.score.toFixed(2)})`)
+            .join(", ") || "–";
+
+        // Rewriting a big <pre> every frame is wasteful; refresh ~4x/second.
+        const now = performance.now();
+        if (now - jsonThrottle > 250) {
+          jsonThrottle = now;
+          const preview = {
+            ...frame,
+            hands: frame.hands.map((h) => ({
+              ...h,
+              points: `${h.points.length} points, e.g. wrist = ${JSON.stringify(h.points[0])}`,
+            })),
+          };
+          $("frameJson").textContent = JSON.stringify(preview, null, 2);
+        }
+      }
+
+      // ---- Main loop ----
+      let running = false;
+      let lastVideoTime = -1;
+      let fpsCount = 0,
+        fpsWindowStart = performance.now();
+
+      function loop() {
+        if (!running) return;
+        // Only run detection when the camera has produced a new frame.
+        if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+          lastVideoTime = video.currentTime;
+          const t0 = performance.now();
+          const result = landmarker.detectForVideo(video, t0);
+          const t1 = performance.now();
+
+          render(toLandmarkFrame(result, t0));
+
+          $("inferenceMs").textContent = `${(t1 - t0).toFixed(1)} ms`;
+          fpsCount++;
+          if (t1 - fpsWindowStart >= 1000) {
+            $("fps").textContent = String(fpsCount);
+            fpsCount = 0;
+            fpsWindowStart = t1;
+          }
+        }
+        requestAnimationFrame(loop);
+      }
+
+      // ---- Wiring ----
+      startBtn.addEventListener("click", async () => {
+        startBtn.disabled = true;
+        try {
+          setStatus("Loading hand model…");
+          await createLandmarker();
+          setStatus("Requesting camera…");
+          await startCamera();
+          running = true;
+          lastVideoTime = -1;
+          stopBtn.disabled = false;
+          setStatus("Running. Show a hand to the camera.");
+          loop();
+        } catch (err) {
+          console.error(err);
+          setStatus(err.message, true);
+          stopCamera();
+          startBtn.disabled = false;
+        }
+      });
+
+      stopBtn.addEventListener("click", () => {
+        running = false;
+        stopCamera();
+        stopBtn.disabled = true;
+        startBtn.disabled = false;
+        setStatus("Stopped.");
+      });
+    </script>
+  </body>
+</html>
