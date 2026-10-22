@@ -9,6 +9,12 @@
  *
  * Missing landmarks and non-finite coordinates become `null` (never 0), which is the API's
  * documented way to express "not detected".
+ *
+ * Detector sourcing (schema v2 app, see asl.js):
+ *   hand columns  <- the dedicated HandLandmarker, the same instance the recorder uses
+ *   face/pose     <- HolisticLandmarker, and only when the schema actually asks for them
+ * `mergeHandResults()` puts both into one HolisticLandmarkerResult-shaped object, so
+ * extractRow()/hasHands() and the wire format are untouched.
  */
 
 export const COLUMN_RE = /^([xyz])_(face|left_hand|right_hand|pose)_(\d+)$/;
@@ -20,6 +26,12 @@ export const GROUP_KEYS = {
   right_hand: "rightHandLandmarks",
   pose: "poseLandmarks",
 };
+
+/**
+ * Column groups that ONLY the Holistic task can produce. The hand-only model has no face and
+ * no pose output, so a schema mentioning these forces Holistic to be loaded as well.
+ */
+export const HOLISTIC_ONLY_GROUPS = ["face", "pose"];
 
 const PRECISION = 1e6; // 6 decimals keeps the payload small without losing meaningful precision
 
@@ -65,6 +77,19 @@ export function buildExtractors(columns) {
 }
 
 /**
+ * True when `columns` names a face or pose feature, i.e. when the hand-only model cannot
+ * satisfy the schema on its own and HolisticLandmarker has to be loaded too.
+ * A hands-only schema (the usual case for fingerspelling) returns false, and capture then
+ * runs the recording path's detector and nothing else.
+ */
+export function needsHolistic(columns) {
+  return (columns ?? []).some((name) => {
+    const m = COLUMN_RE.exec(name);
+    return m ? HOLISTIC_ONLY_GROUPS.includes(m[2]) : false;
+  });
+}
+
+/**
  * Holistic results are arrays of landmark lists (one per person) in current MediaPipe builds,
  * but a flat landmark list is tolerated too. Returns a landmark array or null.
  */
@@ -81,7 +106,92 @@ function num(v) {
     : null;
 }
 
-/** One API row from one Holistic result: exactly `extractors.length` numbers/nulls, in order. */
+/**
+ * Split a HandLandmarkerResult into anatomical left/right landmark lists.
+ *
+ * MediaPipe's handedness assumes a mirrored (selfie) image, but we feed the raw camera frame,
+ * so the labels are flipped — the same convention the recorder applies in landmarks.js, which
+ * keeps the left_hand/right_hand columns meaning the same thing in both modes.
+ *
+ * The first detection of a side wins; a duplicate claim on the same side is dropped rather
+ * than overwriting it, so a frame never silently gains a hand it did not have.
+ *
+ * @returns {{left: Array|null, right: Array|null}} lists of 21 {x,y,z} landmarks
+ */
+export function splitHands(handResult, { swapHandedness = true } = {}) {
+  const out = { left: null, right: null };
+  const lists = handResult?.landmarks ?? [];
+  const cats = handResult?.handedness ?? [];
+  lists.forEach((points, i) => {
+    if (!Array.isArray(points) || points.length === 0) return;
+    let label = cats?.[i]?.[0]?.categoryName ?? null;
+    if (swapHandedness) {
+      if (label === "Left") label = "Right";
+      else if (label === "Right") label = "Left";
+    }
+    const side = label === "Left" ? "left" : label === "Right" ? "right" : null;
+    if (side && !out[side]) out[side] = points;
+  });
+  return out;
+}
+
+/**
+ * Combine the two tasks into ONE HolisticLandmarkerResult-shaped object, so extractRow(),
+ * hasHands() and the JSON payload keep working exactly as before.
+ *
+ *   hands     -> the dedicated HandLandmarker's, whenever it saw that hand. Holistic's hand
+ *                landmarks are derived from a low-resolution pose crop and are the reason the
+ *                capture path used to look worse than the recording path; they are now only a
+ *                fallback for a side the hand model missed in that frame (never a regression
+ *                against the old behaviour).
+ *   face/pose -> Holistic's, unchanged.
+ *
+ * Each hand slot is a `NormalizedLandmark[][]` (one landmark list per person), which is the
+ * shape Holistic uses and the shape pickSet() expects.
+ *
+ * @param {object|null} holisticResult HolisticLandmarkerResult, or null when not used
+ * @param {object|null} handResult HandLandmarkerResult from the shared detector
+ * @param {object} [opts]
+ * @param {boolean} [opts.swapHandedness] recorder convention for handedness labels
+ * @param {boolean} [opts.mirrorHands] mirror hand x back onto a mirrored row (?aslMirror=1);
+ *   also flips the handedness test, because mirroring an image swaps which side a hand is on
+ */
+export function mergeHandResults(
+  holisticResult,
+  handResult,
+  { swapHandedness = true, mirrorHands = false } = {},
+) {
+  const holistic = holisticResult ?? null;
+  const split = handResult
+    ? splitHands(handResult, {
+        swapHandedness: mirrorHands ? !swapHandedness : swapHandedness,
+      })
+    : null;
+
+  const toRowFrame = (points) =>
+    mirrorHands
+      ? points.map((p) =>
+          p && typeof p.x === "number" ? { ...p, x: 1 - p.x } : p,
+        )
+      : points;
+
+  const slot = (side) => {
+    const dedicated = split?.[side] ?? null;
+    if (dedicated) return [toRowFrame(dedicated)];
+    const fallback = pickSet(holistic?.[GROUP_KEYS[`${side}_hand`]]);
+    return fallback ? [fallback] : [];
+  };
+
+  return {
+    ...(holistic ?? {}),
+    faceLandmarks: holistic?.faceLandmarks ?? [],
+    poseLandmarks: holistic?.poseLandmarks ?? [],
+    leftHandLandmarks: slot("left"),
+    rightHandLandmarks: slot("right"),
+  };
+}
+
+/** One API row from one (merged) result: exactly `extractors.length` numbers/nulls, in order. */
 export function extractRow(result, extractors) {
   const sets = {};
   for (const key of Object.values(GROUP_KEYS))

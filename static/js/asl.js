@@ -3,6 +3,13 @@
  * modules and the local proxy. It owns no camera and no animation loop: app.js calls
  * processFrame() once per camera frame while `isCapturing` is true.
  *
+ * Detectors. Hand landmarks always come from the shared HandLandmarker that app.js injects as
+ * `detectHands` — the very same call the landmark recorder uses — so capture mode and record
+ * mode see identical hands. HolisticLandmarker is loaded lazily and used ONLY to fill the
+ * face/pose columns the schema asks for; its hand landmarks (a low-resolution pose-derived crop)
+ * are never sent unless the dedicated hand model missed that hand in that frame.
+ * Consequence: with the hands-only schema, capture runs exactly the recording path.
+ *
  * States: idle -> preparing -> capturing -> recognizing -> idle
  *   cancel() works in preparing / capturing / recognizing and always returns to idle.
  *   A monotonically increasing token makes late async results from a cancelled run harmless.
@@ -14,7 +21,8 @@ import {
   buildExtractors,
   extractRow,
   hasHands,
-  pickSet,
+  mergeHandResults,
+  needsHolistic,
 } from "./asl-features.js";
 import { CaptureSession } from "./asl-capture.js";
 import {
@@ -31,14 +39,19 @@ export class AslController {
    * @param {object} deps
    * @param {(id:string)=>HTMLElement} deps.$ element lookup
    * @param {()=>Promise<object>} deps.loadHolistic resolves to an initialised HolisticLandmarker
+   * @param {()=>boolean} deps.hasHandSource true once the shared HandLandmarker exists. When it
+   *   does, the hand columns come from it and Holistic is only needed for face/pose.
+   * @param {boolean} [deps.swapHandedness] handedness convention (see landmarks.js)
    * @param {()=>boolean} deps.isCameraRunning
    * @param {()=>string|null} deps.blockReason non-null text if capture must not start now
    * @param {()=>void} deps.onChange called after any state change (so app.js can refresh its UI)
-   * @param {{fps:number, maxSeconds:number, mirrorInput:boolean}} deps.options
+   * @param {{fps:number, maxSeconds:number, mirrorInput:boolean, mirrorHands:boolean}} deps.options
    */
   constructor({
     $,
     loadHolistic,
+    hasHandSource,
+    swapHandedness = true,
     isCameraRunning,
     blockReason,
     onChange,
@@ -46,6 +59,8 @@ export class AslController {
   }) {
     this.$ = $;
     this.loadHolistic = loadHolistic;
+    this.hasHandSource = hasHandSource;
+    this.swapHandedness = swapHandedness;
     this.isCameraRunning = isCameraRunning;
     this.blockReason = blockReason;
     this.onChange = onChange;
@@ -53,6 +68,7 @@ export class AslController {
 
     this.state = "idle";
     this.holistic = null;
+    this.holisticInUse = false; // decided from the schema, on start()
     this.schema = null; // { columns, minFrames, maxFrames }
     this.extractors = null;
     this.session = null;
@@ -112,6 +128,13 @@ export class AslController {
     this.$("aslLimit").textContent = lim
       ? `${lim.maxFrames} frames / ${lim.maxSeconds} s at ${lim.fps} FPS`
       : `${this.options.maxSeconds} s at ${this.options.fps} FPS (API limit confirmed on start)`;
+    const det = this.$("aslDetector");
+    if (det)
+      det.textContent = this.holisticInUse
+        ? "HandLandmarker for hands + Holistic for face/pose"
+        : this.state === "idle"
+          ? "HandLandmarker for hands (face/pose not needed so far)"
+          : "HandLandmarker only — schema needs no face/pose";
   }
 
   _showResult(result, stats) {
@@ -166,15 +189,26 @@ export class AslController {
     const token = ++this._token;
     this._clearResult();
     this._setState("preparing");
-    this._status(
-      "Preparing: loading the Holistic model and the recognition schema…",
-    );
+    this._status("Preparing: loading the recognition schema…");
     try {
       await this._ensureSchema(token);
-      const holistic = await this.loadHolistic();
-      if (token !== this._token) return; // cancelled while loading
-      if (!this.isCameraRunning()) throw new Error("The camera was stopped.");
-      this.holistic = holistic;
+      // The schema decides whether Holistic is needed at all. A hands-only schema (the usual
+      // case for fingerspelling) means capture runs the recording path and nothing else: one
+      // detector, one inference per frame, no second GPU context.
+      this.holisticInUse =
+        needsHolistic(this.schema.columns) || !this.hasHandSource?.();
+      if (this.holisticInUse) {
+        this._status(
+          "Preparing: the schema needs face/pose, loading the Holistic model…",
+        );
+        const holistic = await this.loadHolistic();
+        if (token !== this._token) return; // cancelled while loading
+        if (!this.isCameraRunning()) throw new Error("The camera was stopped.");
+        this.holistic = holistic;
+      } else {
+        this.holistic = null;
+      }
+      if (token !== this._token) return;
       this.session = new CaptureSession({
         fps: this.options.fps,
         maxSeconds: this.options.maxSeconds,
@@ -186,7 +220,7 @@ export class AslController {
       this._lastTs = 0;
       this._setState("capturing");
       this._status(
-        `Capturing. Spell your letters clearly, then press “Stop & recognize” (auto-stops after ${this.session.limits.maxSeconds} s).`,
+        `Capturing with the hand detector${this.holisticInUse ? " (plus Holistic for face/pose)" : ""}. Spell your letters clearly, then press “Stop & recognize” (auto-stops after ${this.session.limits.maxSeconds} s).`,
       );
     } catch (err) {
       if (token !== this._token) return;
@@ -200,22 +234,38 @@ export class AslController {
     }
   }
 
-  /** Called by app.js once per camera frame while isCapturing. Returns hands for drawing. */
-  processFrame(video, ts) {
+  /**
+   * Called by app.js once per camera frame while isCapturing.
+   * @param {HTMLVideoElement} video
+   * @param {number} ts frame timestamp, identical to the one the recorder uses
+   * @param {object|null} handResult HandLandmarkerResult for THIS frame, produced by the one
+   *   hand-model call in app.js's loop. Supplies the hand columns.
+   * @returns {object|null} the merged result (nothing is drawn from it any more: app.js draws
+   *   the recording overlay from the same HandLandmarkerResult)
+   */
+  processFrame(video, ts, handResult = null) {
     this._lastTs = ts;
-    let result;
-    try {
-      result = this.holistic.detectForVideo(this._source(video), ts);
-    } catch (err) {
-      console.error(err);
-      this.cancel(`Holistic detection failed: ${err.message}`, "error");
-      return null;
+
+    // Holistic contributes face/pose only, and only when the schema asked for them.
+    let holisticResult = null;
+    if (this.holistic) {
+      try {
+        holisticResult = this.holistic.detectForVideo(this._source(video), ts);
+      } catch (err) {
+        console.error(err);
+        this.cancel(`Holistic detection failed: ${err.message}`, "error");
+        return null;
+      }
     }
-    if (!result) return null;
+
+    const hands = mergeHandResults(holisticResult, handResult, {
+      swapHandedness: this.swapHandedness,
+      mirrorHands: !!this.options.mirrorHands,
+    });
 
     const outcome = this.session.offer(
-      extractRow(result, this.extractors),
-      hasHands(result),
+      extractRow(hands, this.extractors),
+      hasHands(hands),
       ts,
     );
     if (outcome === "limit") {
@@ -225,7 +275,7 @@ export class AslController {
       this.refresh(false);
       this._warnIfNoHands();
     }
-    return this._handsForDrawing(result);
+    return hands;
   }
 
   _warnIfNoHands() {
@@ -295,7 +345,11 @@ export class AslController {
   }
 
   // ---- detection helpers ----
-  /** Optionally mirror the image fed to Holistic (?aslMirror=1) to match selfie-view training data. */
+  /**
+   * Optionally mirror the image fed to Holistic (?aslMirror=1) to match selfie-view training
+   * data. This affects the face/pose columns only: the hand columns come from the dedicated
+   * hand model, which is always fed the raw frame.
+   */
   _source(video) {
     if (!this.options.mirrorInput) return video;
     const w = video.videoWidth;
@@ -314,17 +368,5 @@ export class AslController {
     g.drawImage(video, 0, 0, w, h);
     g.restore();
     return c;
-  }
-
-  /** Hand landmark lists in RAW camera-frame coordinates, ready for the overlay. */
-  _handsForDrawing(result) {
-    const unflip = (set) =>
-      set && this.options.mirrorInput
-        ? set.map((p) => ({ ...p, x: 1 - p.x }))
-        : set;
-    return {
-      left: unflip(pickSet(result.leftHandLandmarks)),
-      right: unflip(pickSet(result.rightHandLandmarks)),
-    };
   }
 }

@@ -33,13 +33,16 @@ const MAX_FRAMES = Math.max(
 // Use ?swapHands=0 if your own test shows the labels are already anatomical.
 const SWAP_HANDEDNESS = params.get("swapHands") !== "0";
 // ASL fingerspelling capture: ?aslFps=15&aslSeconds=15&aslMirror=1
-//   aslMirror=1 feeds Holistic a horizontally mirrored image. Try it if recognition is poor, since
-//   the API's training-data orientation is not documented.
+//   aslMirror=1 feeds Holistic a horizontally mirrored image for the face/pose columns. Try it
+//   if recognition is poor, since the API's training-data orientation is not documented. The hand
+//   columns are mirrored to match, so every column of a row stays in one coordinate frame.
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+const ASL_MIRROR = params.get("aslMirror") === "1";
 const ASL_OPTIONS = {
   fps: clamp(Number(params.get("aslFps")) || 15, 5, 30),
   maxSeconds: clamp(Number(params.get("aslSeconds")) || 15, 2, 60),
-  mirrorInput: params.get("aslMirror") === "1",
+  mirrorInput: ASL_MIRROR,
+  mirrorHands: ASL_MIRROR,
 };
 
 // ---- DOM ----
@@ -376,10 +379,13 @@ scrubber.addEventListener("input", showScrubbedFrame);
 const asl = new AslController({
   $,
   loadHolistic,
+  // Same detector instance and same coordinates as the recorder: capture and export now agree.
+  hasHandSource: () => !!handLandmarker,
+  swapHandedness: SWAP_HANDEDNESS,
   isCameraRunning: () => running,
   blockReason: () =>
     recorder.state === "recording"
-      ? "Stop the landmark recording first; ASL capture uses a different detector."
+      ? "Stop the landmark recording first; the recorder and ASL capture share one frame loop."
       : null,
   onChange: () => updateRecUI(true),
   options: ASL_OPTIONS,
@@ -409,37 +415,14 @@ function render(handResult, rf) {
   $("rightHand").textContent = describeHand(rf.hands.right);
 }
 
-/** Overlay for the Holistic path (ASL capture). Hands only; Holistic gives no handedness score. */
-function renderAsl(hands) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawer ??= new DrawingUtils(ctx);
-  for (const points of [hands.left, hands.right]) {
-    if (!points) continue;
-    drawer.drawConnectors(points, HandLandmarker.HAND_CONNECTIONS, {
-      color: "#4da3ff",
-      lineWidth: 3,
-    });
-    drawer.drawLandmarks(points, { color: "#ffd166", radius: 3 });
-  }
-  $("leftHand").textContent = hands.left
-    ? "detected (Holistic)"
-    : "not detected";
-  $("rightHand").textContent = hands.right
-    ? "detected (Holistic)"
-    : "not detected";
-  const now = performance.now();
-  if (now - previewThrottle > 250) {
-    previewThrottle = now;
-    $("frameJson").textContent =
-      "ASL capture running with the Holistic detector.\nThe hand JSON preview is paused until it ends.";
-  }
-}
-
-function renderPreviewJson(rf) {
+function renderPreviewJson(rf, note) {
   // Rewriting a <pre> every frame is wasteful; the caller refreshes ~4x/second.
   if (recorder.state === "recording") return; // the recording panel shows the captured frame
   $("frameJson").textContent = JSON.stringify(
-    abbreviate({ note: "live preview, not being recorded", hands: rf.hands }),
+    abbreviate({
+      note: note || "live preview, not being recorded",
+      hands: rf.hands,
+    }),
     null,
     2,
   );
@@ -500,32 +483,34 @@ function processFrame(ts, presentedFrames) {
     lastPresented = presentedFrames;
   }
 
-  // One detector per frame: Holistic while an ASL capture runs, otherwise HandLandmarker.
+  // ONE hand detector for BOTH modes: it is always the HandLandmarker, and its result is handed
+  // to the ASL controller, so capture rows and exported frames carry identical hand landmarks.
   const h0 = performance.now();
-  let handResult = null;
-  let aslHands = null;
-  if (asl.isCapturing) aslHands = asl.processFrame(video, ts);
-  else handResult = handLandmarker.detectForVideo(video, ts);
+  const handResult = handLandmarker.detectForVideo(video, ts);
+  // Holistic runs only during an ASL capture, and only when the schema asks for face/pose.
+  const capturing = asl.isCapturing;
+  if (capturing) asl.processFrame(video, ts, handResult);
   const handMs = performance.now() - h0;
 
   const now = performance.now();
-  if (handResult) {
-    const rf = buildRecordFrame({
-      frameMs: ts,
-      handResult,
-      swapHandedness: SWAP_HANDEDNESS,
-    });
-    if (recorder.state === "recording") {
-      const res = recorder.addFrame(rf);
-      if (!res.ok && res.reason === "limit") stopRecording("limit"); // Recorder already stopped itself
-    }
-    render(handResult, rf);
-    if (now - previewThrottle > 250) {
-      previewThrottle = now;
-      renderPreviewJson(rf);
-    }
-  } else if (aslHands) {
-    renderAsl(aslHands);
+  const rf = buildRecordFrame({
+    frameMs: ts,
+    handResult,
+    swapHandedness: SWAP_HANDEDNESS,
+  });
+  if (recorder.state === "recording") {
+    const res = recorder.addFrame(rf);
+    if (!res.ok && res.reason === "limit") stopRecording("limit"); // Recorder already stopped itself
+  }
+  render(handResult, rf);
+  if (now - previewThrottle > 250) {
+    previewThrottle = now;
+    renderPreviewJson(
+      rf,
+      capturing
+        ? "live preview during ASL capture — same HandLandmarker as recording"
+        : "",
+    );
   }
   updateRecUI();
 

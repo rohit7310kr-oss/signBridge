@@ -205,8 +205,10 @@
             Recognizes ASL <strong>fingerspelling</strong> (letters spelled by
             hand) only. It does not translate ASL signs or sentences. Pressing
             “Stop &amp; recognize” sends landmark numbers (no video) to three.ws
-            through this local server. During capture the Holistic detector
-            replaces the hand detector, so landmark recording is paused.
+            through this local server. Capture uses the <strong>same
+            HandLandmarker as the recorder</strong>, so the hands you see while
+            capturing are the hands you would export; the Holistic detector is
+            added only for the face/pose columns the API schema asks for.
           </p>
           <button id="aslStartBtn" disabled>● Start capture</button>
           <button id="aslStopBtn" disabled>■ Stop &amp; recognize</button>
@@ -225,6 +227,8 @@
             <dd id="aslElapsed">0.0 s</dd>
             <dt>Capture limit</dt>
             <dd id="aslLimit">–</dd>
+            <dt>Detector</dt>
+            <dd id="aslDetector">–</dd>
           </dl>
           <div aria-live="polite">
             <strong>Result</strong>
@@ -270,5 +274,6 @@
     </div>
 
     <script type="module" src="js/app.js"></script>
-  </body>
+  <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
+</body>
 </html>
