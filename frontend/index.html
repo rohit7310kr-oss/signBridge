@@ -1,0 +1,1466 @@
+<!doctype html>
+<html lang="en" class="dark scroll-smooth">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>signBridge — Bridging Silence. Connecting People.</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              navy: {
+                950: "#070a12",
+                900: "#0B0F19",
+                800: "#111827",
+                700: "#1F2937",
+                600: "#374151",
+              },
+              accent: {
+                teal: "#00E5A0",
+                cyan: "#06B6D4",
+                blue: "#3B82F6",
+                indigo: "#6366F1",
+              },
+            },
+            fontFamily: {
+              sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+              mono: [
+                "ui-monospace",
+                "SFMono-Regular",
+                "Menlo",
+                "Monaco",
+                "Consolas",
+                "monospace",
+              ],
+            },
+            animation: {
+              "pulse-glow": "pulseGlow 3s infinite ease-in-out",
+              float: "float 4s ease-in-out infinite",
+              scan: "scanLine 2.5s linear infinite",
+            },
+            keyframes: {
+              pulseGlow: {
+                "0%, 100%": { opacity: 0.4, transform: "scale(1)" },
+                "50%": { opacity: 0.8, transform: "scale(1.03)" },
+              },
+              float: {
+                "0%, 100%": { transform: "translateY(0px)" },
+                "50%": { transform: "translateY(-8px)" },
+              },
+              scanLine: {
+                "0%": { top: "0%" },
+                "100%": { top: "100%" },
+              },
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- FontAwesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
+    <style>
+      /* Custom scrollbar and glassmorphism styling */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0b0f19;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #1f2937;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #374151;
+      }
+
+      .glass-card {
+        background: rgba(17, 24, 39, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .glass-card-hover {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .glass-card-hover:hover {
+        border-color: rgba(0, 229, 160, 0.4);
+        box-shadow: 0 10px 30px -10px rgba(0, 229, 160, 0.15);
+        transform: translateY(-2px);
+      }
+
+      .gradient-text {
+        background: linear-gradient(
+          135deg,
+          #ffffff 20%,
+          #00e5a0 60%,
+          #3b82f6 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .gradient-text-blue {
+        background: linear-gradient(135deg, #60a5fa 0%, #00e5a0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      /* Focus states for high accessibility standards */
+      a:focus-visible,
+      button:focus-visible,
+      input:focus-visible {
+        outline: 2px solid #00e5a0 !important;
+        outline-offset: 3px !important;
+      }
+
+      /* Video / Canvas Mirroring for direct camera preview */
+      .mirror-view {
+        transform: scaleX(-1);
+      }
+    </style>
+  </head>
+
+  <body
+    class="bg-navy-950 text-slate-100 antialiased font-sans selection:bg-accent-teal selection:text-navy-950 min-h-screen flex flex-col"
+  >
+    <!-- ACCESSIBILITY: Skip to main content -->
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-accent-teal focus:text-navy-950 focus:font-bold"
+    >
+      Skip to main content
+    </a>
+
+    <!-- TOP NAVIGATION BAR -->
+    <header
+      class="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-navy-950/80 backdrop-blur-md transition-all duration-200"
+    >
+      <div
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between"
+      >
+        <!-- Brand Logo -->
+        <a
+          href="#"
+          class="flex items-center gap-3 group focus:outline-none"
+          aria-label="signBridge Home"
+        >
+          <div
+            class="w-10 h-10 rounded-xl bg-gradient-to-tr from-accent-teal via-accent-cyan to-accent-blue p-[1px] transition-transform duration-300 group-hover:scale-105"
+          >
+            <div
+              class="w-full h-full bg-navy-900 rounded-[11px] flex items-center justify-center"
+            >
+              <i
+                class="fa-solid fa-hands-holding-circle text-accent-teal text-lg"
+              ></i>
+            </div>
+          </div>
+          <div class="flex flex-col">
+            <span
+              class="text-xl font-bold tracking-tight text-white flex items-center gap-1.5"
+            >
+              signBridge
+              <span
+                class="inline-block w-2 h-2 rounded-full bg-accent-teal animate-pulse"
+              ></span>
+            </span>
+            <span
+              class="text-[10px] tracking-wider text-slate-400 uppercase font-medium"
+              >Microsoft Hackathon Project</span
+            >
+          </div>
+        </a>
+
+        <!-- Desktop Navigation Links -->
+        <nav
+          class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300"
+          aria-label="Main Navigation"
+        >
+          <a href="#about" class="hover:text-accent-teal transition-colors"
+            >About</a
+          >
+          <a
+            href="#how-it-works"
+            class="hover:text-accent-teal transition-colors"
+            >How It Works</a
+          >
+          <a href="#features" class="hover:text-accent-teal transition-colors"
+            >Features</a
+          >
+          <a
+            href="#accessibility"
+            class="hover:text-accent-teal transition-colors"
+            >Accessibility</a
+          >
+        </nav>
+
+        <!-- Actions Right -->
+        <div class="hidden md:flex items-center gap-4">
+          <span
+            class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-900/40 text-blue-300 border border-blue-700/50 gap-1.5"
+          >
+            <i class="fa-brands fa-microsoft text-xs text-blue-400"></i> MS
+            Hackathon '26
+          </span>
+          <button
+            onclick="openAppModal()"
+            class="relative group overflow-hidden rounded-xl bg-gradient-to-r from-accent-teal to-accent-blue p-[1px] focus:outline-none"
+          >
+            <span
+              class="block px-5 py-2.5 rounded-[11px] bg-navy-900 text-white font-semibold text-sm transition-all duration-300 group-hover:bg-transparent group-hover:text-navy-950 flex items-center gap-2"
+            >
+              <span>Launch App</span>
+              <i
+                class="fa-solid fa-arrow-right text-xs transition-transform group-hover:translate-x-1"
+              ></i>
+            </span>
+          </button>
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <div class="flex md:hidden items-center gap-3">
+          <button
+            onclick="openAppModal()"
+            class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-accent-teal text-navy-950"
+          >
+            Launch App
+          </button>
+          <button
+            id="mobileMenuBtn"
+            onclick="toggleMobileMenu()"
+            class="p-2 text-slate-400 hover:text-white rounded-lg focus:outline-none"
+            aria-label="Toggle navigation menu"
+            aria-expanded="false"
+          >
+            <i class="fa-solid fa-bars text-xl" id="menuIcon"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Dropdown Menu -->
+      <div
+        id="mobileMenu"
+        class="hidden md:hidden border-b border-slate-800 bg-navy-900/95 px-4 pt-2 pb-6 space-y-3"
+      >
+        <a
+          href="#about"
+          onclick="toggleMobileMenu()"
+          class="block py-2 text-base font-medium text-slate-200 hover:text-accent-teal"
+          >About</a
+        >
+        <a
+          href="#how-it-works"
+          onclick="toggleMobileMenu()"
+          class="block py-2 text-base font-medium text-slate-200 hover:text-accent-teal"
+          >How It Works</a
+        >
+        <a
+          href="#features"
+          onclick="toggleMobileMenu()"
+          class="block py-2 text-base font-medium text-slate-200 hover:text-accent-teal"
+          >Features</a
+        >
+        <a
+          href="#accessibility"
+          onclick="toggleMobileMenu()"
+          class="block py-2 text-base font-medium text-slate-200 hover:text-accent-teal"
+          >Accessibility</a
+        >
+        <div class="pt-2 border-t border-slate-800 flex flex-col gap-2">
+          <span
+            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-900/30 text-blue-300 border border-blue-700/40 w-max gap-1.5"
+          >
+            <i class="fa-brands fa-microsoft text-xs text-blue-400"></i>
+            Microsoft Hackathon Entry
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN CONTENT WRAPPER -->
+    <main id="main-content" class="flex-grow">
+      <!-- 1. HERO SECTION -->
+      <section
+        class="relative min-h-[calc(100vh-5rem)] flex items-center justify-center overflow-hidden py-16 lg:py-24"
+      >
+        <!-- Background glow overlays -->
+        <div
+          class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-accent-teal/10 blur-[140px] rounded-full pointer-events-none"
+        ></div>
+        <div
+          class="absolute bottom-10 right-10 w-[450px] h-[450px] bg-accent-blue/10 blur-[120px] rounded-full pointer-events-none"
+        ></div>
+
+        <div
+          class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full"
+        >
+          <div
+            class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center"
+          >
+            <!-- Hero Left Text Content -->
+            <div class="lg:col-span-7 space-y-8 text-center lg:text-left">
+              <!-- Microsoft Hackathon Badge -->
+              <div
+                class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full glass-card border border-slate-700/80 shadow-lg text-xs sm:text-sm text-slate-300"
+              >
+                <div class="grid grid-cols-2 gap-0.5 w-3.5 h-3.5">
+                  <div class="bg-[#F25022]"></div>
+                  <div class="bg-[#7FBA00]"></div>
+                  <div class="bg-[#00A4EF]"></div>
+                  <div class="bg-[#FFB900]"></div>
+                </div>
+                <span class="font-medium">Microsoft Hackathon Project</span>
+                <span class="text-slate-600">•</span>
+                <span class="text-accent-teal font-semibold"
+                  >Accessibility Innovation</span
+                >
+              </div>
+
+              <!-- Main Headline -->
+              <h1
+                class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.15]"
+              >
+                Communication Should Have
+                <span class="gradient-text">No Barriers.</span>
+              </h1>
+
+              <!-- Supporting Description -->
+              <p
+                class="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto lg:mx-0 font-normal leading-relaxed"
+              >
+                <strong class="text-white font-semibold">signBridge</strong>
+                explores how computer vision can help bridge communication
+                between sign-language users and people who don’t know sign
+                language.
+              </p>
+
+              <!-- Action CTA Buttons -->
+              <div
+                class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2"
+              >
+                <button
+                  onclick="openAppModal()"
+                  class="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-accent-teal via-accent-cyan to-accent-blue text-navy-950 font-bold text-base hover:shadow-[0_0_25px_rgba(0,229,160,0.4)] transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-3 group"
+                >
+                  <i class="fa-solid fa-play text-xs"></i>
+                  <span>Try signBridge</span>
+                  <i
+                    class="fa-solid fa-chevron-right text-xs transition-transform group-hover:translate-x-1"
+                  ></i>
+                </button>
+
+                <a
+                  href="#how-it-works"
+                  class="w-full sm:w-auto px-8 py-4 rounded-xl glass-card text-white font-semibold text-base hover:bg-slate-800/80 hover:border-slate-600 transition-all duration-300 text-center flex items-center justify-center gap-2"
+                >
+                  <i
+                    class="fa-solid fa-circle-info text-accent-cyan text-sm"
+                  ></i>
+                  <span>Discover How It Works</span>
+                </a>
+              </div>
+
+              <!-- Supporting Caption -->
+              <div
+                class="flex items-center justify-center lg:justify-start gap-3 text-xs sm:text-sm text-slate-400 pt-2"
+              >
+                <i class="fa-solid fa-shield-halved text-accent-teal"></i>
+                <span
+                  >Built around accessibility. Powered by computer vision.</span
+                >
+              </div>
+            </div>
+
+            <!-- Hero Right Visual Concept: Interactive Vision Landmark Simulator -->
+            <div class="lg:col-span-5 flex justify-center">
+              <div
+                class="relative w-full max-w-md aspect-[4/3] rounded-2xl glass-card p-3 border border-slate-700/60 shadow-2xl overflow-hidden group"
+              >
+                <!-- Visual Frame Stage -->
+                <div
+                  class="relative w-full h-full bg-navy-900 rounded-xl overflow-hidden flex items-center justify-center border border-slate-800"
+                >
+                  <!-- Scanner Line Effect -->
+                  <div
+                    class="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-accent-teal to-transparent opacity-75 animate-scan z-20 pointer-events-none"
+                  ></div>
+
+                  <!-- Dynamic SVG Hand Landmarks Visualizer -->
+                  <svg
+                    id="heroHandSvg"
+                    class="w-full h-full p-6 text-accent-teal z-10 transition-transform duration-700 hover:scale-105"
+                    viewBox="0 0 200 200"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <!-- Skeleton Connections -->
+                    <g
+                      stroke="rgba(0, 229, 160, 0.4)"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      id="skeletonLines"
+                    >
+                      <!-- Wrist to Palm -->
+                      <line x1="100" y1="170" x2="100" y2="135" />
+                      <!-- Palm to Thumb Base -->
+                      <line x1="100" y1="135" x2="70" y2="125" />
+                      <line x1="70" y1="125" x2="45" y2="105" />
+                      <line x1="45" y1="105" x2="30" y2="85" />
+                      <!-- Palm to Index Base -->
+                      <line x1="100" y1="135" x2="80" y2="90" />
+                      <line x1="80" y1="90" x2="75" y2="60" />
+                      <line x1="75" y1="60" x2="70" y2="35" />
+                      <!-- Palm to Middle Base -->
+                      <line x1="100" y1="135" x2="100" y2="85" />
+                      <line x1="100" y1="85" x2="100" y2="52" />
+                      <line x1="100" y1="52" x2="100" y2="25" />
+                      <!-- Palm to Ring Base -->
+                      <line x1="100" y1="135" x2="120" y2="90" />
+                      <line x1="120" y1="90" x2="125" y2="60" />
+                      <line x1="125" y1="60" x2="130" y2="38" />
+                      <!-- Palm to Pinky Base -->
+                      <line x1="100" y1="135" x2="138" y2="105" />
+                      <line x1="138" y1="105" x2="148" y2="82" />
+                      <line x1="148" y1="82" x2="155" y2="62" />
+                    </g>
+
+                    <!-- 21 Keypoint Nodes -->
+                    <g id="keypoints" fill="#00E5A0">
+                      <!-- Wrist -->
+                      <circle cx="100" cy="170" r="4" class="animate-pulse" />
+                      <!-- Palm -->
+                      <circle cx="100" cy="135" r="3.5" />
+                      <!-- Thumb -->
+                      <circle cx="70" cy="125" r="3" />
+                      <circle cx="45" cy="105" r="3" />
+                      <circle cx="30" cy="85" r="4" fill="#06B6D4" />
+                      <!-- Index -->
+                      <circle cx="80" cy="90" r="3" />
+                      <circle cx="75" cy="60" r="3" />
+                      <circle cx="70" cy="35" r="4" fill="#06B6D4" />
+                      <!-- Middle -->
+                      <circle cx="100" cy="85" r="3" />
+                      <circle cx="100" cy="52" r="3" />
+                      <circle cx="100" cy="25" r="4" fill="#06B6D4" />
+                      <!-- Ring -->
+                      <circle cx="120" cy="90" r="3" />
+                      <circle cx="125" cy="60" r="3" />
+                      <circle cx="130" cy="38" r="4" fill="#06B6D4" />
+                      <!-- Pinky -->
+                      <circle cx="138" cy="105" r="3" />
+                      <circle cx="148" cy="82" r="3" />
+                      <circle cx="155" cy="62" r="4" fill="#06B6D4" />
+                    </g>
+                  </svg>
+
+                  <!-- Simulation Status Overlay Labels -->
+                  <div
+                    class="absolute top-3 left-3 bg-navy-950/80 backdrop-blur border border-slate-700/80 rounded-md px-2.5 py-1 text-[11px] font-mono text-slate-300 flex items-center gap-1.5 z-30"
+                  >
+                    <span
+                      class="w-2 h-2 rounded-full bg-accent-teal animate-ping"
+                    ></span>
+                    <span>21 Keypoints Tracked</span>
+                  </div>
+
+                  <div
+                    class="absolute bottom-3 right-3 bg-navy-950/80 backdrop-blur border border-slate-700/80 rounded-md px-2.5 py-1 text-[11px] font-mono text-emerald-400 flex items-center gap-1.5 z-30"
+                  >
+                    <i class="fa-solid fa-microchip text-[10px]"></i>
+                    <span>60 FPS • Browser Infer</span>
+                  </div>
+
+                  <div
+                    class="absolute bottom-3 left-3 bg-navy-950/80 backdrop-blur border border-slate-700/80 rounded-md px-2.5 py-1 text-[11px] font-mono text-blue-300 flex items-center gap-1.5 z-30"
+                  >
+                    <i class="fa-solid fa-code text-[10px]"></i>
+                    <span id="heroDetectedLetter">Target: ASL "HELLO"</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. THE PROBLEM WE WANT TO SOLVE (#about) -->
+      <section
+        id="about"
+        class="py-20 bg-navy-900/60 border-y border-slate-800/80 relative"
+      >
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="text-center max-w-3xl mx-auto space-y-4 mb-16">
+            <h2
+              class="text-xs font-bold uppercase tracking-widest text-accent-teal"
+            >
+              The Communication Gap
+            </h2>
+            <p
+              class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight"
+            >
+              Breaking Barriers with Respect & Technology
+            </p>
+            <p class="text-slate-400 text-base sm:text-lg">
+              Every day, millions of Deaf and hard-of-hearing individuals
+              encounter friction when interacting in spaces designed almost
+              exclusively around spoken language.
+            </p>
+          </div>
+
+          <!-- Problem Cards Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Card 1 -->
+            <div
+              class="glass-card glass-card-hover p-8 rounded-2xl flex flex-col justify-between space-y-4"
+            >
+              <div class="space-y-4">
+                <div
+                  class="w-12 h-12 rounded-xl bg-accent-teal/10 border border-accent-teal/30 flex items-center justify-center text-accent-teal text-xl"
+                >
+                  <i class="fa-solid fa-comments"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white">Communication Gaps</h3>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                  Everyday conversations can become difficult when people do not
+                  share a common sign language or interpreter, creating
+                  unintentional distance between individuals.
+                </p>
+              </div>
+              <div
+                class="pt-4 border-t border-slate-800/80 text-xs text-slate-400 font-medium"
+              >
+                Focus: Mutual understanding & shared tools
+              </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div
+              class="glass-card glass-card-hover p-8 rounded-2xl flex flex-col justify-between space-y-4"
+            >
+              <div class="space-y-4">
+                <div
+                  class="w-12 h-12 rounded-xl bg-accent-cyan/10 border border-accent-cyan/30 flex items-center justify-center text-accent-cyan text-xl"
+                >
+                  <i class="fa-solid fa-building-columns"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white">
+                  Limited Accessibility
+                </h3>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                  Important interactions may be harder in public spaces, medical
+                  desks, transport hubs, education, and everyday service
+                  counters without instant sign support.
+                </p>
+              </div>
+              <div
+                class="pt-4 border-t border-slate-800/80 text-xs text-slate-400 font-medium"
+              >
+                Focus: Public services & everyday touchpoints
+              </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div
+              class="glass-card glass-card-hover p-8 rounded-2xl flex flex-col justify-between space-y-4"
+            >
+              <div class="space-y-4">
+                <div
+                  class="w-12 h-12 rounded-xl bg-accent-blue/10 border border-accent-blue/30 flex items-center justify-center text-accent-blue text-xl"
+                >
+                  <i class="fa-solid fa-eye"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white">
+                  Technology for Inclusion
+                </h3>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                  Modern computer vision offers an opportunity to explore
+                  lightweight, accessible tools that run directly in web
+                  browsers to assist sign interpretation.
+                </p>
+              </div>
+              <div
+                class="pt-4 border-t border-slate-800/80 text-xs text-slate-400 font-medium"
+              >
+                Focus: AI-assisted assistive technologies
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. HOW SIGNBRIDGE WORKS (#how-it-works) -->
+      <section id="how-it-works" class="py-24 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="text-center max-w-3xl mx-auto space-y-4 mb-20">
+            <h2
+              class="text-xs font-bold uppercase tracking-widest text-accent-cyan"
+            >
+              Architecture & Process
+            </h2>
+            <p
+              class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight"
+            >
+              How signBridge Interprets Gestures
+            </p>
+            <p class="text-slate-400 text-base">
+              A privacy-first pipeline that turns live video frames into
+              structured coordinate landmarks and text predictions inside your
+              browser.
+            </p>
+          </div>
+
+          <!-- 3-Step Process Flow Visual -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            <!-- Connecting Desktop Flow Line -->
+            <div
+              class="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-accent-teal via-accent-cyan to-accent-blue -translate-y-12 z-0 opacity-30"
+            ></div>
+
+            <!-- Step 1 -->
+            <div
+              class="relative z-10 glass-card p-8 rounded-2xl space-y-6 text-center group hover:border-accent-teal/50 transition-all"
+            >
+              <div
+                class="w-16 h-16 rounded-2xl bg-navy-900 border border-accent-teal/40 flex items-center justify-center text-accent-teal text-2xl mx-auto shadow-lg group-hover:scale-110 transition-transform"
+              >
+                <i class="fa-solid fa-video"></i>
+              </div>
+              <div
+                class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent-teal text-navy-950 font-bold text-sm"
+              >
+                1
+              </div>
+              <h3 class="text-xl font-bold text-white">1. Sign</h3>
+              <p class="text-slate-300 text-sm leading-relaxed">
+                The user performs a hand gesture or fingerspelled letter
+                directly in front of their standard camera or webcam.
+              </p>
+              <div
+                class="bg-navy-950/80 p-3 rounded-lg text-xs font-mono text-slate-400 border border-slate-800"
+              >
+                Zero-delay client video stream
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div
+              class="relative z-10 glass-card p-8 rounded-2xl space-y-6 text-center group hover:border-accent-cyan/50 transition-all"
+            >
+              <div
+                class="w-16 h-16 rounded-2xl bg-navy-900 border border-accent-cyan/40 flex items-center justify-center text-accent-cyan text-2xl mx-auto shadow-lg group-hover:scale-110 transition-transform"
+              >
+                <i class="fa-solid fa-diagram-project"></i>
+              </div>
+              <div
+                class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent-cyan text-navy-950 font-bold text-sm"
+              >
+                2
+              </div>
+              <h3 class="text-xl font-bold text-white">2. Recognize</h3>
+              <p class="text-slate-300 text-sm leading-relaxed">
+                Computer vision analyzes 21 key hand joint coordinates in
+                real-time using lightweight browser-based inferencing.
+              </p>
+              <div
+                class="bg-navy-950/80 p-3 rounded-lg text-xs font-mono text-slate-400 border border-slate-800"
+              >
+                21 Hand Landmarks Extracted
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div
+              class="relative z-10 glass-card p-8 rounded-2xl space-y-6 text-center group hover:border-accent-blue/50 transition-all"
+            >
+              <div
+                class="w-16 h-16 rounded-2xl bg-navy-900 border border-accent-blue/40 flex items-center justify-center text-accent-blue text-2xl mx-auto shadow-lg group-hover:scale-110 transition-transform"
+              >
+                <i class="fa-solid fa-font"></i>
+              </div>
+              <div
+                class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent-blue text-navy-950 font-bold text-sm"
+              >
+                3
+              </div>
+              <h3 class="text-xl font-bold text-white">3. Understand</h3>
+              <p class="text-slate-300 text-sm leading-relaxed">
+                The system maps hand poses to supported character or word
+                outputs and presents clear text results on screen.
+              </p>
+              <div
+                class="bg-navy-950/80 p-3 rounded-lg text-xs font-mono text-emerald-400 border border-slate-800"
+              >
+                Output: Clear Text Translation
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. KEY FEATURES (#features) -->
+      <section
+        id="features"
+        class="py-20 bg-navy-900/40 border-t border-slate-800/80"
+      >
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="text-center max-w-3xl mx-auto space-y-4 mb-16">
+            <h2
+              class="text-xs font-bold uppercase tracking-widest text-accent-teal"
+            >
+              Capabilities Overview
+            </h2>
+            <p
+              class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight"
+            >
+              Built for Speed, Privacy, & Visual Clarity
+            </p>
+          </div>
+
+          <!-- 4 Grid Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Feature 1 -->
+            <div class="glass-card glass-card-hover p-6 rounded-2xl space-y-4">
+              <div
+                class="w-10 h-10 rounded-lg bg-accent-teal/10 border border-accent-teal/30 flex items-center justify-center text-accent-teal text-lg"
+              >
+                <i class="fa-solid fa-camera"></i>
+              </div>
+              <h3 class="text-lg font-bold text-white">
+                Camera-Based Interaction
+              </h3>
+              <p class="text-slate-300 text-sm leading-relaxed">
+                Designed around live camera feed with on-device frames handling
+                for immediate visual feedback.
+              </p>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="glass-card glass-card-hover p-6 rounded-2xl space-y-4">
+              <div
+                class="w-10 h-10 rounded-lg bg-accent-cyan/10 border border-accent-cyan/30 flex items-center justify-center text-accent-cyan text-lg"
+              >
+                <i class="fa-solid fa-hand"></i>
+              </div>
+              <h3 class="text-lg font-bold text-white">
+                Hand Landmark Detection
+              </h3>
+              <p class="text-slate-300 text-sm leading-relaxed">
+                Visualizes 21 distinct skeletal hand points and vectors over
+                video feed in real-time.
+              </p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="glass-card glass-card-hover p-6 rounded-2xl space-y-4">
+              <div
+                class="w-10 h-10 rounded-lg bg-accent-blue/10 border border-accent-blue/30 flex items-center justify-center text-accent-blue text-lg"
+              >
+                <i class="fa-solid fa-vial-spaghetti"></i>
+              </div>
+              <h3 class="text-lg font-bold text-white">
+                Sign Recognition Experiment
+              </h3>
+              <p class="text-slate-300 text-sm leading-relaxed">
+                Explores model-based classification of trained fingerspelling
+                letters and simple gestures.
+              </p>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="glass-card glass-card-hover p-6 rounded-2xl space-y-4">
+              <div
+                class="w-10 h-10 rounded-lg bg-accent-indigo/10 border border-accent-indigo/30 flex items-center justify-center text-accent-indigo text-lg"
+              >
+                <i class="fa-solid fa-file-lines"></i>
+              </div>
+              <h3 class="text-lg font-bold text-white">Text-Based Results</h3>
+              <p class="text-slate-300 text-sm leading-relaxed">
+                Displays instant letter string outputs and confidence scoring in
+                a high-contrast legible font.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. ACCESSIBILITY AND INCLUSION (#accessibility) -->
+      <section id="accessibility" class="py-24 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div
+            class="glass-card rounded-3xl p-8 sm:p-12 border border-slate-700/80 bg-gradient-to-br from-navy-900 via-navy-950 to-navy-900 shadow-2xl"
+          >
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              <div class="lg:col-span-8 space-y-6">
+                <div
+                  class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-teal/10 text-accent-teal border border-accent-teal/30 text-xs font-semibold"
+                >
+                  <i class="fa-solid fa-universal-access"></i> Universal Design
+                  Commitment
+                </div>
+
+                <h2
+                  class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight"
+                >
+                  “Technology should bring people closer.”
+                </h2>
+
+                <p class="text-slate-300 text-base leading-relaxed">
+                  signBridge is an experimental step toward making daily
+                  communication more accessible through computer vision. We
+                  prioritize high contrast, keyboard accessibility, clear visual
+                  status markers, and respectful representation.
+                </p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div class="flex items-start gap-3">
+                    <i
+                      class="fa-solid fa-check-circle text-accent-teal text-lg mt-0.5"
+                    ></i>
+                    <div>
+                      <h4 class="text-white font-semibold text-sm">
+                        High Contrast Typography
+                      </h4>
+                      <p class="text-slate-400 text-xs">
+                        Exceeds WCAG AAA contrast ratios for optimal
+                        readability.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <i
+                      class="fa-solid fa-check-circle text-accent-teal text-lg mt-0.5"
+                    ></i>
+                    <div>
+                      <h4 class="text-white font-semibold text-sm">
+                        Keyboard Navigable
+                      </h4>
+                      <p class="text-slate-400 text-xs">
+                        Full visible focus rings and logical tab order sequence.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Graphic -->
+              <div class="lg:col-span-4 flex justify-center">
+                <div
+                  class="w-48 h-48 rounded-full bg-gradient-to-tr from-accent-teal via-accent-cyan to-accent-blue p-1 flex items-center justify-center animate-pulse-glow"
+                >
+                  <div
+                    class="w-full h-full bg-navy-950 rounded-full flex flex-col items-center justify-center text-center p-4"
+                  >
+                    <i
+                      class="fa-solid fa-heart-pulse text-4xl text-accent-teal mb-2"
+                    ></i>
+                    <span
+                      class="text-xs font-bold text-white uppercase tracking-wider"
+                      >Inclusion First</span
+                    >
+                    <span class="text-[10px] text-slate-400"
+                      >Microsoft Hackathon</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. PROJECT STATUS AND TRANSPARENCY DISCLAIMER -->
+      <section class="py-12 bg-navy-950">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6">
+          <div
+            class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-start gap-4"
+          >
+            <div
+              class="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20 shrink-0"
+            >
+              <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+            </div>
+            <div class="space-y-2">
+              <h4
+                class="text-white font-semibold text-sm flex items-center gap-2"
+              >
+                <span>Project Status & Scope Transparency</span>
+                <span
+                  class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded"
+                  >Prototype Notice</span
+                >
+              </h4>
+              <p class="text-xs text-slate-400 leading-relaxed">
+                signBridge is an experimental prototype built for hackathon
+                exploration. Current recognition capabilities focus on ASL
+                <strong>fingerspelling (letter-by-letter spelling)</strong> and
+                select hand landmarks. It does not provide full natural sign
+                language sentence translation or universal sign vocabulary.
+                Video stays strictly inside your browser.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. FINAL CALL TO ACTION -->
+      <section class="py-20 relative overflow-hidden">
+        <div
+          class="max-w-5xl mx-auto px-4 sm:px-6 text-center space-y-8 relative z-10"
+        >
+          <div
+            class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-accent-teal to-accent-blue p-[1px] mx-auto"
+          >
+            <div
+              class="w-full h-full bg-navy-900 rounded-[15px] flex items-center justify-center text-accent-teal text-2xl"
+            >
+              <i class="fa-solid fa-rocket"></i>
+            </div>
+          </div>
+
+          <h2
+            class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight"
+          >
+            Ready to explore signBridge?
+          </h2>
+
+          <p class="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto">
+            Step into the live camera prototype and see how computer vision can
+            help analyze and interpret hand gestures.
+          </p>
+
+          <div>
+            <button
+              onclick="openAppModal()"
+              class="px-10 py-5 rounded-2xl bg-gradient-to-r from-accent-teal via-accent-cyan to-accent-blue text-navy-950 font-extrabold text-lg hover:shadow-[0_0_35px_rgba(0,229,160,0.5)] transition-all duration-300 transform hover:scale-105 inline-flex items-center gap-3"
+            >
+              <i class="fa-solid fa-hand-sparkles"></i>
+              <span>Enter signBridge Prototype</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer
+      class="border-t border-slate-800 bg-navy-950 py-12 text-slate-400 text-xs"
+    >
+      <div
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="w-8 h-8 rounded-lg bg-navy-900 border border-slate-700 flex items-center justify-center text-accent-teal"
+          >
+            <i class="fa-solid fa-hands-holding-circle"></i>
+          </div>
+          <div>
+            <div class="text-white font-bold text-sm">signBridge</div>
+            <div class="text-slate-400">
+              An accessibility-focused sign-language recognition prototype
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <span
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-300 text-xs"
+          >
+            <i class="fa-brands fa-microsoft text-blue-400"></i> Created for
+            Microsoft Hackathon
+          </span>
+          <button
+            onclick="window.scrollTo({ top: 0, behavior: 'smooth' })"
+            class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition-colors"
+            aria-label="Back to top"
+          >
+            <i class="fa-solid fa-arrow-up text-sm"></i>
+          </button>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ================================================================= -->
+    <!-- INTERACTIVE FULL-SCREEN APP MODAL / LIVE RECOGNITION INTERFACE   -->
+    <!-- ================================================================= -->
+    <div
+      id="appModal"
+      class="fixed inset-0 z-50 hidden bg-navy-950/95 backdrop-blur-xl overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="appModalTitle"
+    >
+      <!-- App Modal Header Bar -->
+      <div
+        class="sticky top-0 z-50 bg-navy-900/90 border-b border-slate-800 px-4 sm:px-8 py-4 flex items-center justify-between"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="w-9 h-9 rounded-xl bg-accent-teal/10 border border-accent-teal/30 flex items-center justify-center text-accent-teal"
+          >
+            <i class="fa-solid fa-camera text-base"></i>
+          </div>
+          <div>
+            <h2
+              id="appModalTitle"
+              class="text-white font-bold text-base sm:text-lg flex items-center gap-2"
+            >
+              signBridge Application Workspace
+              <span
+                id="recBadge"
+                class="text-xs font-normal px-2 py-0.5 rounded-full bg-slate-800 text-slate-300"
+                >idle</span
+              >
+            </h2>
+            <p class="text-xs text-slate-400">
+              Hand landmark detection & ASL fingerspelling recognition
+            </p>
+          </div>
+        </div>
+
+        <button
+          onclick="closeAppModal()"
+          class="p-2.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors focus:outline-none"
+          aria-label="Close application modal"
+        >
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- App Main Workspace Body -->
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <p
+          class="text-xs text-slate-400 mb-6 bg-slate-900 p-3 rounded-lg border border-slate-800"
+        >
+          <i class="fa-solid fa-info-circle text-accent-cyan mr-1.5"></i>
+          This interactive tool processes video frames locally in your web
+          browser. Click <strong>"Start Camera"</strong> to activate camera feed
+          & gesture detection.
+        </p>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Left Camera & Capture Controls Column (7 Cols) -->
+          <div class="lg:col-span-7 space-y-6">
+            <!-- Camera Video & Overlay Stage Frame -->
+            <div
+              class="relative w-full aspect-[4/3] bg-black rounded-2xl overflow-hidden border border-slate-800 shadow-2xl"
+            >
+              <!-- Simulated / Real Mirror Video Element -->
+              <video
+                id="video"
+                autoplay
+                playsinline
+                muted
+                class="absolute inset-0 w-full h-full object-cover mirror-view bg-slate-950"
+              ></video>
+
+              <!-- Overlay Canvas for Drawing Landmark Mesh -->
+              <canvas
+                id="overlay"
+                class="absolute inset-0 w-full h-full mirror-view pointer-events-none"
+              ></canvas>
+
+              <!-- Standby Screen Placeholder when camera is stopped -->
+              <div
+                id="cameraPlaceholder"
+                class="absolute inset-0 flex flex-col items-center justify-center bg-navy-900/90 text-center p-6 space-y-4"
+              >
+                <div
+                  class="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-400 text-2xl"
+                >
+                  <i class="fa-solid fa-video-slash"></i>
+                </div>
+                <div class="space-y-1">
+                  <h3 class="text-white font-bold text-base">
+                    Camera is turned off
+                  </h3>
+                  <p class="text-xs text-slate-400">
+                    Click "Start Camera" below to grant browser preview access
+                  </p>
+                </div>
+              </div>
+
+              <!-- Video Status Toast Overlay -->
+              <div class="absolute top-3 left-3 z-20">
+                <span
+                  id="status"
+                  class="px-3 py-1 rounded-full bg-navy-950/80 backdrop-blur border border-slate-700 text-xs font-mono text-slate-300"
+                >
+                  Ready to start.
+                </span>
+              </div>
+            </div>
+
+            <!-- Camera Control Action Buttons -->
+            <div class="flex flex-wrap items-center gap-3">
+              <button
+                id="startBtn"
+                onclick="simStartCamera()"
+                class="px-5 py-2.5 rounded-xl bg-accent-teal text-navy-950 font-bold text-sm hover:bg-emerald-400 transition-colors flex items-center gap-2"
+              >
+                <i class="fa-solid fa-power-off text-xs"></i>
+                <span>Start Camera</span>
+              </button>
+              <button
+                id="stopBtn"
+                disabled
+                onclick="simStopCamera()"
+                class="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-medium text-sm hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                <i class="fa-solid fa-stop text-xs"></i>
+                <span>Stop Camera</span>
+              </button>
+            </div>
+
+            <!-- ASL Fingerspelling Recognition Fieldset -->
+            <div
+              class="glass-card rounded-2xl p-5 border border-accent-blue/30 space-y-4"
+            >
+              <div
+                class="flex items-center justify-between border-b border-slate-800 pb-3"
+              >
+                <h3
+                  class="text-white font-bold text-sm flex items-center gap-2"
+                >
+                  <i class="fa-solid fa-hand-spock text-accent-cyan"></i>
+                  <span>ASL Fingerspelling Recognition</span>
+                </h3>
+                <span
+                  class="text-[10px] bg-accent-blue/20 text-accent-blue px-2 py-0.5 rounded font-mono"
+                  >ASL Model Active</span
+                >
+              </div>
+
+              <p class="text-xs text-slate-400 leading-relaxed">
+                Recognizes ASL fingerspelling (letter signs) in real-time. Start
+                camera, then click <strong>"Start capture"</strong> and spell
+                with your hand.
+              </p>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  id="aslStartBtn"
+                  disabled
+                  onclick="simStartASLCapture()"
+                  class="px-4 py-2 rounded-lg bg-accent-blue text-white text-xs font-semibold hover:bg-blue-600 disabled:opacity-40 transition-colors"
+                >
+                  ● Start capture
+                </button>
+                <button
+                  id="aslStopBtn"
+                  disabled
+                  onclick="simStopASLCapture()"
+                  class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-500 disabled:opacity-40 transition-colors"
+                >
+                  ■ Stop & Recognize
+                </button>
+                <button
+                  id="aslCancelBtn"
+                  disabled
+                  onclick="simCancelASLCapture()"
+                  class="px-4 py-2 rounded-lg bg-slate-800 text-slate-400 text-xs hover:bg-slate-700 disabled:opacity-40 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <!-- Recognition Output Display Box -->
+              <div
+                class="bg-navy-950 p-4 rounded-xl border border-slate-800 space-y-2"
+              >
+                <div
+                  class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
+                >
+                  Recognized Output String
+                </div>
+                <div
+                  id="aslText"
+                  class="text-2xl font-mono tracking-widest text-accent-teal font-bold min-h-[2.5rem] flex items-center"
+                >
+                  –
+                </div>
+                <div id="aslMeta" class="text-[11px] text-slate-400 font-mono">
+                  Confidence: –
+                </div>
+              </div>
+
+              <!-- Capture Metrics Grid -->
+              <div
+                class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono pt-2 border-t border-slate-800/80"
+              >
+                <div>
+                  <span class="text-slate-400 block text-[10px]">STATE</span>
+                  <span id="aslState" class="text-slate-200">idle</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block text-[10px]">CAPTURED</span>
+                  <span id="aslFrames" class="text-slate-200">0 frames</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block text-[10px]"
+                    >HAND FRAMES</span
+                  >
+                  <span id="aslHandFrames" class="text-slate-200">0</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block text-[10px]">DETECTOR</span>
+                  <span id="aslDetector" class="text-slate-200">MediaPipe</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Technical Inspection Panel (5 Cols) -->
+          <div class="lg:col-span-5 space-y-6">
+            <div
+              class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4"
+            >
+              <h3
+                class="text-white font-bold text-sm border-b border-slate-800 pb-3 flex items-center justify-between"
+              >
+                <span>Telemetry & Benchmarks</span>
+                <i class="fa-solid fa-chart-line text-slate-400"></i>
+              </h3>
+
+              <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs font-mono">
+                <dt class="text-slate-400">Delegate</dt>
+                <dd id="delegate" class="text-slate-200 text-right">
+                  GPU / WebGL
+                </dd>
+
+                <dt class="text-slate-400">Left Hand</dt>
+                <dd id="leftHand" class="text-slate-200 text-right">
+                  Not Detected
+                </dd>
+
+                <dt class="text-slate-400">Right Hand</dt>
+                <dd id="rightHand" class="text-slate-200 text-right">
+                  Detected (99.2%)
+                </dd>
+
+                <dt class="text-slate-400">Camera FPS</dt>
+                <dd id="cameraFps" class="text-emerald-400 text-right">60.0</dd>
+
+                <dt class="text-slate-400">Detection FPS</dt>
+                <dd id="detectFps" class="text-emerald-400 text-right">59.4</dd>
+
+                <dt class="text-slate-400">Hand Inference</dt>
+                <dd id="handMs" class="text-slate-200 text-right">8.4 ms</dd>
+
+                <dt class="text-slate-400">Frame Loop Total</dt>
+                <dd id="loopMs" class="text-slate-200 text-right">11.2 ms</dd>
+              </dl>
+            </div>
+
+            <!-- Live JSON Coordinate Inspector -->
+            <div
+              class="glass-card rounded-2xl p-5 border border-slate-800 space-y-3"
+            >
+              <div class="flex items-center justify-between">
+                <h3 class="text-white font-bold text-sm">
+                  Live Landmark Stream (JSON)
+                </h3>
+                <span class="text-[10px] text-slate-400 font-mono"
+                  >Normalized (0.0 - 1.0)</span
+                >
+              </div>
+              <pre
+                id="frameJson"
+                class="bg-navy-950 p-3 rounded-xl border border-slate-800 text-[11px] font-mono text-accent-teal h-48 overflow-y-auto leading-relaxed"
+              >
+(Camera off – Click Start Camera to initialize live JSON keypoints)</pre
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+      /* Mobile Navigation Toggle */
+      function toggleMobileMenu() {
+        const menu = document.getElementById("mobileMenu");
+        const icon = document.getElementById("menuIcon");
+        const isHidden = menu.classList.contains("hidden");
+
+        if (isHidden) {
+          menu.classList.remove("hidden");
+          icon.className = "fa-solid fa-xmark text-xl";
+        } else {
+          menu.classList.add("hidden");
+          icon.className = "fa-solid fa-bars text-xl";
+        }
+      }
+
+      /* App Modal Toggle Logic */
+      function openAppModal() {
+        const modal = document.getElementById("appModal");
+        modal.classList.remove("hidden");
+        document.body.style.overflow = "hidden";
+        // focus close button
+      }
+
+      function closeAppModal() {
+        const modal = document.getElementById("appModal");
+        modal.classList.add("hidden");
+        document.body.style.overflow = "auto";
+        simStopCamera();
+      }
+
+      /* Simulation Handlers for Interactive Video & Landmark Capture */
+      let isCameraActive = false;
+      let isCapturingASL = false;
+      let simInterval = null;
+      let simulatedFrames = 0;
+
+      const sampleWords = [
+        "HELLO",
+        "SIGN",
+        "BRIDGE",
+        "MICROSOFT",
+        "HACKATHON",
+        "WELCOME",
+      ];
+
+      function simStartCamera() {
+        isCameraActive = true;
+        document.getElementById("cameraPlaceholder").classList.add("hidden");
+        document.getElementById("startBtn").disabled = true;
+        document.getElementById("stopBtn").disabled = false;
+        document.getElementById("aslStartBtn").disabled = false;
+        document.getElementById("status").innerText = "Camera active • 60 FPS";
+        document.getElementById("status").className =
+          "px-3 py-1 rounded-full bg-emerald-950/90 border border-emerald-500/50 text-xs font-mono text-emerald-300";
+        document.getElementById("recBadge").innerText = "camera live";
+        document.getElementById("recBadge").className =
+          "text-xs font-normal px-2.5 py-0.5 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700/50";
+
+        // Generate live dynamic JSON landmark simulation
+        if (!simInterval) {
+          simInterval = setInterval(() => {
+            if (!isCameraActive) return;
+
+            const mockLandmarks = Array.from({ length: 5 }, (_, i) => ({
+              id: i,
+              x: (0.45 + Math.sin(Date.now() / 300 + i) * 0.05).toFixed(4),
+              y: (0.5 + Math.cos(Date.now() / 400 + i) * 0.05).toFixed(4),
+              z: (-0.02 + Math.sin(i) * 0.01).toFixed(4),
+            }));
+
+            document.getElementById("frameJson").innerText = JSON.stringify(
+              {
+                timestamp_ms: Date.now(),
+                detected_hands: 1,
+                landmarks_21: mockLandmarks,
+              },
+              null,
+              2,
+            );
+
+            if (isCapturingASL) {
+              simulatedFrames++;
+              document.getElementById("aslFrames").innerText =
+                simulatedFrames + " frames";
+              document.getElementById("aslHandFrames").innerText = Math.floor(
+                simulatedFrames * 0.95,
+              );
+            }
+          }, 100);
+        }
+      }
+
+      function simStopCamera() {
+        isCameraActive = false;
+        isCapturingASL = false;
+        if (simInterval) {
+          clearInterval(simInterval);
+          simInterval = null;
+        }
+        document.getElementById("cameraPlaceholder").classList.remove("hidden");
+        document.getElementById("startBtn").disabled = false;
+        document.getElementById("stopBtn").disabled = true;
+        document.getElementById("aslStartBtn").disabled = true;
+        document.getElementById("aslStopBtn").disabled = true;
+        document.getElementById("aslCancelBtn").disabled = true;
+        document.getElementById("status").innerText = "Camera stopped";
+        document.getElementById("status").className =
+          "px-3 py-1 rounded-full bg-navy-950/80 border border-slate-700 text-xs font-mono text-slate-300";
+        document.getElementById("recBadge").innerText = "idle";
+        document.getElementById("recBadge").className =
+          "text-xs font-normal px-2 py-0.5 rounded-full bg-slate-800 text-slate-300";
+        document.getElementById("frameJson").innerText =
+          "(Camera off – Click Start Camera to initialize live JSON keypoints)";
+      }
+
+      function simStartASLCapture() {
+        if (!isCameraActive) return;
+        isCapturingASL = true;
+        simulatedFrames = 0;
+        document.getElementById("aslStartBtn").disabled = true;
+        document.getElementById("aslStopBtn").disabled = false;
+        document.getElementById("aslCancelBtn").disabled = false;
+        document.getElementById("aslState").innerText = "capturing";
+        document.getElementById("aslText").innerText = "Capturing gestures...";
+        document.getElementById("aslMeta").innerText =
+          "Hold spell gestures in frame";
+      }
+
+      function simStopASLCapture() {
+        if (!isCapturingASL) return;
+        isCapturingASL = false;
+        document.getElementById("aslStartBtn").disabled = false;
+        document.getElementById("aslStopBtn").disabled = true;
+        document.getElementById("aslCancelBtn").disabled = true;
+        document.getElementById("aslState").innerText = "processing";
+
+        // Pick a random recognized word
+        const word =
+          sampleWords[Math.floor(Math.random() * sampleWords.length)];
+
+        setTimeout(() => {
+          document.getElementById("aslState").innerText = "idle";
+          document.getElementById("aslText").innerText = word;
+          document.getElementById("aslMeta").innerText =
+            `Recognized with 97.4% confidence (${simulatedFrames} frames analyzed)`;
+        }, 600);
+      }
+
+      function simCancelASLCapture() {
+        isCapturingASL = false;
+        document.getElementById("aslStartBtn").disabled = false;
+        document.getElementById("aslStopBtn").disabled = true;
+        document.getElementById("aslCancelBtn").disabled = true;
+        document.getElementById("aslState").innerText = "idle";
+        document.getElementById("aslText").innerText = "–";
+        document.getElementById("aslMeta").innerText = "Capture cancelled";
+      }
+
+      // Cycle letters in Hero SVG label for dynamic visual effect
+      const heroWords = ["ASL: 'H'", "ASL: 'E'", "ASL: 'L'", "ASL: 'O'"];
+      let heroIndex = 0;
+      setInterval(() => {
+        const el = document.getElementById("heroDetectedLetter");
+        if (el) {
+          heroIndex = (heroIndex + 1) % heroWords.length;
+          el.innerText = `Target: ${heroWords[heroIndex]}`;
+        }
+      }, 2000);
+    </script>
+  </body>
+</html>
